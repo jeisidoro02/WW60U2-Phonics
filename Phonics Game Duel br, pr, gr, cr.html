@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phonics Duel: Blend Master</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Luckiest+Guy&family=Quicksand:wght@400;700&display=swap');
+        
+        body {
+            font-family: 'Quicksand', sans-serif;
+            overflow: hidden;
+            background-color: #f0f9ff;
+            user-select: none;
+        }
+
+        .title-font {
+            font-family: 'Luckiest+Guy', cursive;
+        }
+
+        .player-side {
+            transition: background-color 0.2s ease;
+        }
+
+        .choice-btn {
+            transition: transform 0.1s active, background-color 0.2s;
+            box-shadow: 0 6px 0 #00000020;
+        }
+
+        .choice-btn:active {
+            transform: translateY(4px);
+            box-shadow: 0 2px 0 #00000020;
+        }
+
+        .celebration {
+            animation: bounce 0.5s infinite alternate;
+        }
+
+        @keyframes bounce {
+            from { transform: scale(1); }
+            to { transform: scale(1.2); }
+        }
+
+        .shake {
+            animation: shake 0.4s;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+
+        .hidden-pane {
+            display: none !important;
+        }
+
+        .pulse-speaker {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7); }
+            70% { transform: scale(1.1); box-shadow: 0 0 0 20px rgba(59, 130, 246, 0); }
+            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
+        }
+    </style>
+</head>
+<body class="h-screen w-screen flex flex-col">
+
+    <!-- SETUP SCREEN -->
+    <div id="setup-screen" class="fixed inset-0 z-50 bg-indigo-700 flex flex-col items-center justify-center p-6 text-white text-center">
+        <h1 class="text-7xl title-font mb-4 drop-shadow-lg text-yellow-300">PHONICS DUEL!</h1>
+        <p class="mb-8 text-2xl font-bold italic tracking-widest text-indigo-200 uppercase">CR, BR, PR, GR Blends</p>
+        
+        <div class="bg-white text-gray-800 p-8 rounded-3xl shadow-2xl w-full max-w-md border-4 border-indigo-400">
+            <h2 class="text-2xl font-bold mb-4">Challenge Settings</h2>
+            
+            <div class="mb-6">
+                <label class="block text-left font-semibold mb-2 text-indigo-600">Time Limit:</label>
+                <select id="timer-select" class="w-full p-4 border-2 border-indigo-100 rounded-xl outline-none focus:border-indigo-500 bg-indigo-50 font-bold">
+                    <option value="60">1 Minute Sprint</option>
+                    <option value="120" selected>2 Minute Duel</option>
+                    <option value="180">3 Minute Marathon</option>
+                    <option value="0">Unlimited Practice</option>
+                </select>
+            </div>
+
+            <div class="flex flex-col gap-3">
+                <button id="start-btn" class="bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-5 px-8 rounded-2xl text-3xl transition shadow-xl active:scale-95">
+                    START DUEL
+                </button>
+                <button id="edit-btn" class="bg-gray-100 hover:bg-gray-200 text-gray-500 font-bold py-2 px-8 rounded-2xl transition">
+                    Word Editor
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- EDIT SCREEN -->
+    <div id="edit-screen" class="hidden-pane fixed inset-0 z-[60] bg-white flex flex-col p-6 overflow-y-auto">
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="text-3xl font-bold text-indigo-600">Word Database</h2>
+            <button id="close-edit-btn" class="bg-emerald-500 text-white px-8 py-3 rounded-xl font-bold shadow-md">SAVE & EXIT</button>
+        </div>
+        <div id="question-list" class="space-y-4">
+            <!-- Dynamic items -->
+        </div>
+        <button id="add-item-btn" class="mt-6 bg-indigo-50 border-2 border-dashed border-indigo-300 p-4 rounded-xl text-indigo-600 font-bold hover:bg-indigo-100 transition">
+            + Add Custom Phonics Pair
+        </button>
+    </div>
+
+    <!-- HUD -->
+    <div id="hud" class="h-28 bg-white border-b-4 border-gray-100 flex justify-between items-center px-10 relative z-10 hidden-pane shadow-sm">
+        <div class="flex flex-col items-start">
+            <span class="text-indigo-400 text-sm font-black uppercase tracking-tighter">Blue Team</span>
+            <div id="p1-score-display" class="text-5xl font-black text-indigo-600">0</div>
+        </div>
+
+        <div class="flex flex-col items-center gap-2">
+            <div id="timer-display" class="text-2xl font-black text-gray-300">--:--</div>
+            <button id="shared-speaker" class="pulse-speaker bg-indigo-500 text-white p-5 rounded-full shadow-xl transform active:scale-90 transition">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                </svg>
+            </button>
+        </div>
+
+        <div class="flex flex-col items-end">
+            <span class="text-rose-400 text-sm font-black uppercase tracking-tighter">Red Team</span>
+            <div id="p2-score-display" class="text-5xl font-black text-rose-600">0</div>
+        </div>
+    </div>
+
+    <!-- GAME BOARD -->
+    <div id="game-board" class="flex-1 flex hidden-pane overflow-hidden">
+        <!-- Player 1 Side -->
+        <div id="p1-side" class="player-side flex-1 border-r-4 border-gray-100 bg-indigo-50 flex flex-col items-center justify-center p-6">
+            <div id="p1-choices" class="grid grid-cols-2 gap-6 w-full max-w-md">
+                <!-- Choices -->
+            </div>
+            <div id="p1-feedback" class="mt-8 h-12 text-3xl font-bold"></div>
+        </div>
+
+        <!-- Player 2 Side -->
+        <div id="p2-side" class="player-side flex-1 bg-rose-50 flex flex-col items-center justify-center p-6">
+            <div id="p2-choices" class="grid grid-cols-2 gap-6 w-full max-w-md">
+                <!-- Choices -->
+            </div>
+            <div id="p2-feedback" class="mt-8 h-12 text-3xl font-bold"></div>
+        </div>
+    </div>
+
+    <!-- RESULT SCREEN -->
+    <div id="result-screen" class="hidden-pane fixed inset-0 z-[70] bg-indigo-950 bg-opacity-95 flex flex-col items-center justify-center p-6 text-white text-center">
+        <h1 class="text-8xl title-font mb-4 text-yellow-400">RESULTS</h1>
+        <div id="winner-text" class="text-5xl font-bold mb-10"></div>
+        
+        <div class="flex gap-24 mb-14">
+            <div class="text-center">
+                <div class="text-2xl opacity-80 mb-2">Blue Team</div>
+                <div id="final-p1-score" class="text-8xl font-black text-indigo-400">0</div>
+            </div>
+            <div class="text-center">
+                <div class="text-2xl opacity-80 mb-2">Red Team</div>
+                <div id="final-p2-score" class="text-8xl font-black text-rose-400">0</div>
+            </div>
+        </div>
+
+        <button onclick="location.reload()" class="bg-yellow-400 text-indigo-900 font-bold py-5 px-16 rounded-3xl text-3xl shadow-2xl hover:scale-105 active:scale-95 transition">
+            NEW DUEL
+        </button>
+    </div>
+
+    <script>
+        const apiKey = ""; 
+        
+        // Cleaned word list: BR, CR, PR, GR only. No homophones.
+        let questions = [
+            // BR words
+            { word: "brush", options: ["brush", "crush", "blush", "fresh"] },
+            { word: "brick", options: ["brick", "prick", "trick", "slick"] },
+            { word: "bring", options: ["bring", "cling", "sting", "swing"] },
+            { word: "bread", options: ["bread", "tread", "dread", "bleed"] },
+            { word: "bridge", options: ["bridge", "fridge", "grudge", "ridge"] },
+            { word: "broom", options: ["broom", "groom", "room", "bloom"] },
+            { word: "brown", options: ["brown", "crown", "frown", "brawn"] },
+            { word: "branch", options: ["branch", "blanch", "crunch", "stanch"] },
+            // CR words
+            { word: "crab", options: ["crab", "grab", "drab", "scab"] },
+            { word: "crash", options: ["crash", "clash", "trash", "flash"] },
+            { word: "cream", options: ["cream", "dream", "gleam", "steam"] },
+            { word: "crane", options: ["crane", "grain", "plane", "drain"] },
+            { word: "crisp", options: ["crisp", "clasp", "grasp", "frisk"] },
+            { word: "crush", options: ["crush", "brush", "flush", "slush"] },
+            { word: "crown", options: ["crown", "brown", "frown", "clown"] },
+            { word: "crack", options: ["crack", "black", "track", "stack"] },
+            // PR words
+            { word: "press", options: ["press", "dress", "bless", "chess"] },
+            { word: "price", options: ["price", "slice", "trice", "twice"] },
+            { word: "prize", options: ["prize", "prime", "prise", "pride"] },
+            { word: "proud", options: ["proud", "cloud", "loud", "crowd"] },
+            { word: "princess", options: ["princess", "princes", "presses", "glasses"] },
+            { word: "prank", options: ["prank", "drank", "plank", "blank"] },
+            { word: "print", options: ["print", "flint", "splint", "glint"] },
+            { word: "pride", options: ["pride", "bride", "glide", "stride"] },
+            // GR words
+            { word: "grass", options: ["grass", "glass", "brass", "class"] },
+            { word: "grapes", options: ["grapes", "drapes", "shapes", "scrapes"] },
+            { word: "green", options: ["green", "clean", "queen", "screen"] },
+            { word: "grab", options: ["grab", "crab", "drab", "slab"] },
+            { word: "grain", options: ["grain", "drain", "train", "brain"] },
+            { word: "grand", options: ["grand", "brand", "stand", "bland"] },
+            { word: "grow", options: ["grow", "glow", "crow", "flow"] },
+            { word: "grunt", options: ["grunt", "front", "blunt", "stunt"] }
+        ];
+
+        let gameState = {
+            isPlaying: false,
+            timeLeft: 0,
+            timerInterval: null,
+            p1Score: 0,
+            p2Score: 0,
+            currentQuestion: null,
+            startTime: 0,
+            isQuestionActive: false
+        };
+
+        const screens = {
+            setup: document.getElementById('setup-screen'),
+            edit: document.getElementById('edit-screen'),
+            game: document.getElementById('game-board'),
+            hud: document.getElementById('hud'),
+            result: document.getElementById('result-screen')
+        };
+
+        async function playTTS(text) {
+            try {
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: `Say clearly: ${text}` }] }],
+                        generationConfig: {
+                            responseModalities: ["AUDIO"],
+                            speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: "Puck" } } }
+                        },
+                        model: "gemini-2.5-flash-preview-tts"
+                    })
+                });
+
+                const data = await response.json();
+                const base64Audio = data.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+                if (!base64Audio) return;
+
+                const audioBlob = pcmToWav(base64Audio, 24000);
+                const url = URL.createObjectURL(audioBlob);
+                const audio = new Audio(url);
+                audio.play();
+            } catch (error) {
+                console.error("TTS Error", error);
+            }
+        }
+
+        function pcmToWav(base64, sampleRate) {
+            const binaryString = atob(base64);
+            const len = binaryString.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) bytes[i] = binaryString.charCodeAt(i);
+            const buffer = new ArrayBuffer(44 + len);
+            const view = new DataView(buffer);
+            const writeString = (offset, string) => {
+                for (let i = 0; i < string.length; i++) view.setUint8(offset + i, string.charCodeAt(i));
+            };
+            writeString(0, 'RIFF');
+            view.setUint32(4, 36 + len, true);
+            writeString(8, 'WAVE');
+            writeString(12, 'fmt ');
+            view.setUint32(16, 16, true);
+            view.setUint16(20, 1, true);
+            view.setUint16(22, 1, true);
+            view.setUint32(24, sampleRate, true);
+            view.setUint32(28, sampleRate * 2, true);
+            view.setUint16(32, 2, true);
+            view.setUint16(34, 16, true);
+            writeString(36, 'data');
+            view.setUint32(40, len, true);
+            for (let i = 0; i < len; i++) view.setUint8(44 + i, bytes[i]);
+            return new Blob([buffer], { type: 'audio/wav' });
+        }
+
+        function init() {
+            document.getElementById('start-btn').onclick = startGame;
+            document.getElementById('edit-btn').onclick = openEditor;
+            document.getElementById('close-edit-btn').onclick = closeEditor;
+            document.getElementById('add-item-btn').onclick = addNewEditorItem;
+            document.getElementById('shared-speaker').onclick = () => {
+                if(gameState.currentQuestion) playTTS(gameState.currentQuestion.word);
+            };
+        }
+
+        function startGame() {
+            const timeVal = parseInt(document.getElementById('timer-select').value);
+            gameState.timeLeft = timeVal;
+            gameState.isPlaying = true;
+            gameState.p1Score = 0;
+            gameState.p2Score = 0;
+
+            screens.setup.classList.add('hidden-pane');
+            screens.hud.classList.remove('hidden-pane');
+            screens.game.classList.remove('hidden-pane');
+
+            updateScoreDisplay();
+            startTimer();
+            syncNextQuestion();
+        }
+
+        function startTimer() {
+            if (gameState.timeLeft === 0) {
+                document.getElementById('timer-display').innerText = "∞ MODE";
+                return;
+            }
+
+            gameState.timerInterval = setInterval(() => {
+                gameState.timeLeft--;
+                const mins = Math.floor(gameState.timeLeft / 60);
+                const secs = gameState.timeLeft % 60;
+                document.getElementById('timer-display').innerText = `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+
+                if (gameState.timeLeft <= 0) endGame();
+            }, 1000);
+        }
+
+        function syncNextQuestion() {
+            gameState.isQuestionActive = true;
+            const q = questions[Math.floor(Math.random() * questions.length)];
+            gameState.currentQuestion = q;
+            gameState.startTime = Date.now();
+            
+            const options = [...q.options].sort(() => Math.random() - 0.5);
+            
+            renderChoices(1, options);
+            renderChoices(2, options);
+            
+            setTimeout(() => playTTS(q.word), 150);
+        }
+
+        function renderChoices(playerNum, options) {
+            const container = document.getElementById(`p${playerNum}-choices`);
+            container.innerHTML = '';
+            
+            options.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = `choice-btn ${playerNum === 1 ? 'bg-indigo-500 hover:bg-indigo-600' : 'bg-rose-500 hover:bg-rose-600'} text-white font-bold py-10 px-4 rounded-3xl text-2xl shadow-lg active:translate-y-1 transition`;
+                btn.innerText = opt;
+                btn.onclick = () => handleAnswer(playerNum, opt);
+                container.appendChild(btn);
+            });
+        }
+
+        function handleAnswer(playerNum, selected) {
+            if (!gameState.isQuestionActive) return;
+
+            const feedback = document.getElementById(`p${playerNum}-feedback`);
+            const otherFeedback = document.getElementById(`p${playerNum === 1 ? 2 : 1}-feedback`);
+            const side = document.getElementById(`p${playerNum}-side`);
+
+            if (selected === gameState.currentQuestion.word) {
+                gameState.isQuestionActive = false;
+                const elapsed = (Date.now() - gameState.startTime) / 1000;
+                let points = 10 - Math.floor(elapsed * 2);
+                if (points < 2) points = 2;
+
+                if (playerNum === 1) gameState.p1Score += points;
+                else gameState.p2Score += points;
+
+                feedback.innerText = `+${points} FAST! ⚡`;
+                feedback.className = "mt-8 h-12 text-3xl font-bold text-emerald-600 celebration";
+                otherFeedback.innerText = "Too slow! 🐢";
+                otherFeedback.className = "mt-8 h-12 text-3xl font-bold text-gray-400 opacity-40";
+
+                updateScoreDisplay();
+                side.classList.add('bg-emerald-100');
+                
+                setTimeout(() => {
+                    side.classList.remove('bg-emerald-100');
+                    feedback.innerText = "";
+                    otherFeedback.innerText = "";
+                    syncNextQuestion();
+                }, 1000);
+            } else {
+                if (playerNum === 1) gameState.p1Score = Math.max(0, gameState.p1Score - 1);
+                else gameState.p2Score = Math.max(0, gameState.p2Score - 1);
+                updateScoreDisplay();
+
+                feedback.innerText = "NO! (-1) ❌";
+                feedback.className = "mt-8 h-12 text-3xl font-bold text-rose-500 shake";
+                setTimeout(() => {
+                    feedback.innerText = "";
+                }, 800);
+            }
+        }
+
+        function updateScoreDisplay() {
+            document.getElementById('p1-score-display').innerText = gameState.p1Score;
+            document.getElementById('p2-score-display').innerText = gameState.p2Score;
+        }
+
+        function endGame() {
+            clearInterval(gameState.timerInterval);
+            gameState.isPlaying = false;
+            gameState.isQuestionActive = false;
+            
+            const winnerText = document.getElementById('winner-text');
+            if (gameState.p1Score > gameState.p2Score) {
+                winnerText.innerText = "BLUE TEAM WINS! 🏆";
+                winnerText.style.color = "#4f46e5";
+            } else if (gameState.p2Score > gameState.p1Score) {
+                winnerText.innerText = "RED TEAM WINS! 🏆";
+                winnerText.style.color = "#e11d48";
+            } else {
+                winnerText.innerText = "A TIE! 🤝";
+                winnerText.style.color = "#fbbf24";
+            }
+
+            document.getElementById('final-p1-score').innerText = gameState.p1Score;
+            document.getElementById('final-p2-score').innerText = gameState.p2Score;
+            screens.result.classList.remove('hidden-pane');
+        }
+
+        function openEditor() {
+            screens.setup.classList.add('hidden-pane');
+            screens.edit.classList.remove('hidden-pane');
+            renderEditorList();
+        }
+
+        function closeEditor() {
+            saveEditorChanges();
+            screens.edit.classList.add('hidden-pane');
+            screens.setup.classList.remove('hidden-pane');
+        }
+
+        function renderEditorList() {
+            const list = document.getElementById('question-list');
+            list.innerHTML = '';
+            questions.forEach((q, idx) => {
+                const div = document.createElement('div');
+                div.className = "p-5 border-2 border-indigo-100 rounded-2xl flex items-center gap-4 bg-white shadow-sm";
+                div.innerHTML = `
+                    <div class="flex-1">
+                        <label class="text-xs font-bold text-indigo-400 uppercase">Correct Word</label>
+                        <input type="text" value="${q.word}" class="q-word w-full p-3 border-2 border-gray-100 rounded-xl focus:border-indigo-400 outline-none font-bold">
+                    </div>
+                    <div class="flex-[2]">
+                         <label class="text-xs font-bold text-indigo-400 uppercase">Distractors (Comma separated)</label>
+                        <input type="text" value="${q.options.join(', ')}" class="q-options w-full p-3 border-2 border-gray-100 rounded-xl focus:border-indigo-400 outline-none">
+                    </div>
+                    <button onclick="deleteEditorItem(${idx})" class="bg-rose-50 text-rose-500 font-bold p-4 rounded-xl hover:bg-rose-500 hover:text-white transition">✕</button>
+                `;
+                list.appendChild(div);
+            });
+        }
+
+        function addNewEditorItem() {
+            questions.push({ word: "crab", options: ["crab", "grab", "drab", "scab"] });
+            renderEditorList();
+        }
+
+        function deleteEditorItem(idx) {
+            questions.splice(idx, 1);
+            renderEditorList();
+        }
+
+        function saveEditorChanges() {
+            const words = document.querySelectorAll('.q-word');
+            const optionsInputs = document.querySelectorAll('.q-options');
+            const newQuestions = [];
+            words.forEach((w, i) => {
+                const word = w.value.trim().toLowerCase();
+                const opts = optionsInputs[i].value.split(',').map(s => s.trim().toLowerCase()).filter(s => s !== "");
+                if (word && opts.length >= 1) {
+                    newQuestions.push({
+                        word: word,
+                        options: opts.slice(0, 4)
+                    });
+                }
+            });
+            if (newQuestions.length > 0) questions = newQuestions;
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
